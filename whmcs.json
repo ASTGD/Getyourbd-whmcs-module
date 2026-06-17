@@ -1,0 +1,27 @@
+{
+  "schema": "1.0",
+  "type": "whmcs-registrars",
+  "name": "getyourbd",
+  "license": "MIT",
+  "category": "registrar",
+  "description": {
+    "name": "GetYourBD .bd Domain Integration",
+    "tagline": "WHMCS .bd lookup and registration through the GetYourBD Partner API.",
+    "long": "Adds .bd WHOIS lookup support, checkout fields for GetYourBD-required registrant data, and a registrar module that creates GetYourBD partner domain orders after WHMCS payment automation triggers registration.",
+    "features": [
+      "Adds and removes the .bd WHOIS server entry through addon activation lifecycle",
+      "Registers additional .bd domain fields for NID and document references",
+      "Creates GetYourBD partner domain orders with HTTP Basic Auth and multipart form data"
+    ]
+  },
+  "support": {
+    "homepage": "https://getyour.com.bd",
+    "docs_url": "https://github.com/ASTGD/getyourbdpartnerapi"
+  },
+  "authors": [
+    {
+      "name": "ASTGD",
+      "homepage": "https://github.com/ASTGD"
+    }
+  ]
+}
