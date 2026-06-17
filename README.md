@@ -1,6 +1,6 @@
 # GetYourBD WHMCS .bd Domain Integration
 
-This package contains a WHMCS addon module plus a WHMCS registrar module for selling `.bd` family domains through the GetYourBD Partner API.
+This package contains a WHMCS addon module plus a WHMCS registrar module for selling `.bd` family domains through the GetYourBD Partner API. The repository is public.
 
 ## What It Includes
 
