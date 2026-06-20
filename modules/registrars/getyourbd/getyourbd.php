@@ -8,6 +8,7 @@ require_once __DIR__ . '/lib/bootstrap.php';
 
 use GetYourBd\ApiClient;
 use GetYourBd\DocumentResolver;
+use GetYourBd\DomainDataManager;
 use GetYourBd\FieldExtractor;
 use GetYourBd\Installer;
 use GetYourBd\OrderRepository;
@@ -39,36 +40,25 @@ function getyourbd_getConfigArray()
             'Size' => '40',
             'Description' => 'HTTP Basic Auth password from GetYourBD.',
         ],
-        'ApiBaseUrl' => [
-            'FriendlyName' => 'API Base URL',
-            'Type' => 'text',
-            'Size' => '60',
-            'Default' => 'https://getyour.com.bd',
-            'Description' => 'Defaults to the production endpoint documented by GetYourBD.',
-        ],
-        'ApiTimeout' => [
-            'FriendlyName' => 'API Timeout',
-            'Type' => 'text',
-            'Size' => '8',
-            'Default' => '30',
-            'Description' => 'Timeout in seconds for partner API calls.',
-        ],
         'DefaultNameserver1' => [
             'FriendlyName' => 'Default Nameserver 1',
             'Type' => 'text',
             'Size' => '40',
+            'Default' => 'ns1.btcl.com.bd',
             'Description' => 'Used only if WHMCS does not pass nameservers for the order.',
         ],
         'DefaultNameserver2' => [
             'FriendlyName' => 'Default Nameserver 2',
             'Type' => 'text',
             'Size' => '40',
+            'Default' => 'ns2.btcl.com.bd',
             'Description' => 'Used only if WHMCS does not pass nameservers for the order.',
         ],
         'DefaultNameserver3' => [
             'FriendlyName' => 'Default Nameserver 3',
             'Type' => 'text',
             'Size' => '40',
+            'Default' => 'ns3.btcl.com.bd',
             'Description' => 'Optional third nameserver; the GetYourBD API accepts up to three.',
         ],
         'DocumentBasePath' => [
@@ -105,6 +95,7 @@ function getyourbd_RegisterDomain($params)
 
     try {
         Installer::ensureOrderTable();
+        $params = DomainDataManager::enrichRegistrarParams($params);
 
         $payload = FieldExtractor::buildPayload($params);
         $resolver = new DocumentResolver(
@@ -124,10 +115,10 @@ function getyourbd_RegisterDomain($params)
         );
 
         $client = new ApiClient(
-            (string) ($params['ApiBaseUrl'] ?? 'https://getyour.com.bd'),
+            'https://getyour.com.bd',
             (string) ($params['PartnerUserId'] ?? ''),
             (string) ($params['PartnerPassword'] ?? ''),
-            (int) ($params['ApiTimeout'] ?? 30),
+            30,
             ((string) ($params['DebugMode'] ?? '')) === 'on'
         );
 

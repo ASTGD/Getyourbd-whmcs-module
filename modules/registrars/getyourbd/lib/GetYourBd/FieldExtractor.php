@@ -6,10 +6,10 @@ use InvalidArgumentException;
 
 class FieldExtractor
 {
-    public const FIELD_NID = 'GetYourBD NID';
-    public const FIELD_CONTACT_NUMBER = 'GetYourBD Contact Number';
-    public const FIELD_NID_DOCUMENT = 'GetYourBD NID Document';
-    public const FIELD_REGISTRATION_DOCUMENT = 'GetYourBD Registration Document';
+    public const FIELD_NID = 'NID';
+    public const FIELD_CONTACT_NUMBER = 'Mobile Number';
+    public const FIELD_NID_DOCUMENT = 'NID Document';
+    public const FIELD_REGISTRATION_DOCUMENT = 'Registration Document';
 
     private const SUPPORTED_TLDS = [
         'bd',
@@ -22,6 +22,11 @@ class FieldExtractor
         'mil.bd',
         'info.bd',
         'বাংলা',
+        'co.bd',
+        'tv.bd',
+        'id.bd',
+        'sch.bd',
+        'ai.bd',
     ];
 
     public static function buildDomainName(array $params): string
@@ -44,7 +49,7 @@ class FieldExtractor
             }
         }
 
-        throw new InvalidArgumentException('GetYourBD only supports .bd family and .বাংলা domain registrations.');
+        throw new InvalidArgumentException('GetYourBD only supports configured .bd family and .বাংলা domain registrations.');
     }
 
     public static function buildPayload(array $params): array
@@ -66,7 +71,11 @@ class FieldExtractor
             throw new InvalidArgumentException('GetYourBD NID must be 10, 13, or 17 digits.');
         }
 
-        $contactNumber = self::fieldValue($additionalFields, [self::FIELD_CONTACT_NUMBER]);
+        $contactNumber = self::fieldValue($additionalFields, [
+            self::FIELD_CONTACT_NUMBER,
+            'GetYourBD Contact Number',
+            'Contact Number',
+        ]);
         if ($contactNumber === '') {
             $contactNumber = (string) ($params['fullphonenumber'] ?? $params['phonenumber'] ?? '');
         }
@@ -114,12 +123,14 @@ class FieldExtractor
             'years' => $years,
             'nidDocumentReference' => self::fieldValue($additionalFields, [
                 self::FIELD_NID_DOCUMENT,
+                'GetYourBD NID Document',
                 'NID Document',
                 'NID Document Path',
                 'NID Document URL',
             ]),
             'registrationDocumentReference' => self::fieldValue($additionalFields, [
                 self::FIELD_REGISTRATION_DOCUMENT,
+                'GetYourBD Registration Document',
                 'Registration Document',
                 'Registration Document Path',
                 'Registration Document URL',

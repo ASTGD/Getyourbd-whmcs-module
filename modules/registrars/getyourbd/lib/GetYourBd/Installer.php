@@ -7,35 +7,58 @@ use WHMCS\Database\Capsule;
 
 class Installer
 {
-    public const WHOIS_EXTENSIONS = '.bd,.com.bd,.net.bd,.org.bd,.edu.bd,.ac.bd,.gov.bd,.mil.bd,.info.bd,.বাংলা';
+    public const WHOIS_EXTENSIONS = '.com.bd,.net.bd,.org.bd,.edu.bd,.ac.bd,.gov.bd,.mil.bd,.info.bd,.বাংলা,.co.bd,.tv.bd,.id.bd,.sch.bd,.ai.bd,.bd';
     public const WHOIS_URI = 'socket://13.214.45.11:1043';
     public const WHOIS_AVAILABLE = 'Domain available';
 
     private const ADDITIONAL_FIELDS_START = '// BEGIN GetYourBD additional domain fields';
     private const ADDITIONAL_FIELDS_END = '// END GetYourBD additional domain fields';
-
+    private const WHOIS_EXTENSION_LIST = [
+        '.com.bd',
+        '.net.bd',
+        '.org.bd',
+        '.edu.bd',
+        '.ac.bd',
+        '.gov.bd',
+        '.mil.bd',
+        '.info.bd',
+        '.বাংলা',
+        '.co.bd',
+        '.tv.bd',
+        '.id.bd',
+        '.sch.bd',
+        '.ai.bd',
+        '.bd',
+    ];
     public static function ensureWhoisEntry(string $rootDir): array
     {
         $path = self::whoisPath($rootDir);
         $entries = self::readWhoisEntries($path);
+        $normalised = [];
 
         foreach ($entries as $entry) {
-            if (self::hasWhoisCoverage($entry)) {
-                return [
-                    'changed' => false,
-                    'path' => $path,
-                    'message' => 'GetYourBD WHOIS entry already exists.',
-                ];
+            if (!self::isManagedWhoisEntry($entry)) {
+                $normalised[] = $entry;
             }
         }
 
-        $entries[] = self::whoisEntry();
-        self::writeWhoisEntries($path, $entries);
+        foreach (self::WHOIS_EXTENSION_LIST as $extension) {
+            $normalised[] = self::whoisEntry($extension);
+        }
+
+        $changed = self::normaliseWhoisEntriesForCompare($entries)
+            !== self::normaliseWhoisEntriesForCompare($normalised);
+
+        if ($changed) {
+            self::writeWhoisEntries($path, $normalised);
+        }
 
         return [
-            'changed' => true,
+            'changed' => $changed,
             'path' => $path,
-            'message' => 'GetYourBD WHOIS entry added.',
+            'message' => $changed
+                ? 'GetYourBD WHOIS entries added/updated.'
+                : 'GetYourBD WHOIS entries already exist.',
         ];
     }
 
@@ -47,7 +70,7 @@ class Installer
         $removed = 0;
 
         foreach ($entries as $entry) {
-            if (self::isWhoisEntryMatch($entry)) {
+            if (self::isManagedWhoisEntry($entry)) {
                 $removed++;
                 continue;
             }
@@ -63,8 +86,8 @@ class Installer
             'changed' => $removed > 0,
             'path' => $path,
             'message' => $removed > 0
-                ? 'GetYourBD WHOIS entry removed.'
-                : 'GetYourBD WHOIS entry was not present.',
+                ? 'GetYourBD WHOIS entries removed.'
+                : 'GetYourBD WHOIS entries were not present.',
         ];
     }
 
@@ -167,10 +190,10 @@ class Installer
         });
     }
 
-    public static function whoisEntry(): array
+    public static function whoisEntry(string $extension = self::WHOIS_EXTENSIONS): array
     {
         return [
-            'extensions' => self::WHOIS_EXTENSIONS,
+            'extensions' => $extension,
             'uri' => self::WHOIS_URI,
             'available' => self::WHOIS_AVAILABLE,
         ];
@@ -232,22 +255,7 @@ class Installer
         }
     }
 
-    private static function isWhoisEntryMatch($entry): bool
-    {
-        if (!is_array($entry)) {
-            return false;
-        }
-
-        $uri = isset($entry['uri']) ? (string) $entry['uri'] : '';
-        $available = isset($entry['available']) ? (string) $entry['available'] : '';
-        $extensions = isset($entry['extensions']) ? (string) $entry['extensions'] : '';
-
-        return strcasecmp($uri, self::WHOIS_URI) === 0
-            && strcasecmp($available, self::WHOIS_AVAILABLE) === 0
-            && self::normaliseExtensions($extensions) === self::normaliseExtensions(self::WHOIS_EXTENSIONS);
-    }
-
-    private static function hasWhoisCoverage($entry): bool
+    private static function isManagedWhoisEntry($entry): bool
     {
         if (!is_array($entry)) {
             return false;
@@ -261,14 +269,21 @@ class Installer
             return false;
         }
 
-        $existing = self::normaliseExtensions($extensions);
-        foreach (self::normaliseExtensions(self::WHOIS_EXTENSIONS) as $required) {
-            if (!in_array($required, $existing, true)) {
+        $managed = self::normaliseExtensions(self::WHOIS_EXTENSIONS);
+        foreach (self::normaliseExtensions($extensions) as $extension) {
+            if (!in_array($extension, $managed, true)) {
                 return false;
             }
         }
 
-        return true;
+        return $extensions !== '';
+    }
+
+    private static function normaliseWhoisEntriesForCompare(array $entries): array
+    {
+        return array_map(static function ($entry) {
+            return is_array($entry) ? $entry : (array) $entry;
+        }, array_values($entries));
     }
 
     private static function normaliseExtensions(string $extensions): array

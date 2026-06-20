@@ -56,6 +56,11 @@ class DocumentResolver
     private function resolve(string $reference, string $label): array
     {
         $reference = trim($reference);
+        $uploaded = UploadManager::resolveReference($reference);
+        if ($uploaded) {
+            return $this->document($uploaded['path'], $uploaded['filename'], false);
+        }
+
         if (preg_match('/^https?:\/\//i', $reference)) {
             return $this->resolveRemote($reference, $label);
         }

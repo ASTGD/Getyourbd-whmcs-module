@@ -15,11 +15,16 @@ $getyourbdExtensions = [
     '.mil.bd',
     '.info.bd',
     '.বাংলা',
+    '.co.bd',
+    '.tv.bd',
+    '.id.bd',
+    '.sch.bd',
+    '.ai.bd',
 ];
 
 foreach ($getyourbdExtensions as $extension) {
     $additionaldomainfields[$extension][] = [
-        'Name' => 'GetYourBD NID',
+        'Name' => 'NID',
         'Type' => 'text',
         'Size' => '30',
         'Required' => true,
@@ -27,7 +32,7 @@ foreach ($getyourbdExtensions as $extension) {
     ];
 
     $additionaldomainfields[$extension][] = [
-        'Name' => 'GetYourBD Contact Number',
+        'Name' => 'Mobile Number',
         'Type' => 'text',
         'Size' => '30',
         'Required' => true,
@@ -35,18 +40,18 @@ foreach ($getyourbdExtensions as $extension) {
     ];
 
     $additionaldomainfields[$extension][] = [
-        'Name' => 'GetYourBD NID Document',
+        'Name' => 'NID Document',
         'Type' => 'text',
         'Size' => '80',
         'Required' => true,
-        'Description' => 'Server file path, relative document path, or HTTPS URL if enabled in registrar settings.',
+        'Description' => 'Upload a JPG, PNG, or PDF copy of the NID.',
     ];
 
     $additionaldomainfields[$extension][] = [
-        'Name' => 'GetYourBD Registration Document',
+        'Name' => 'Registration Document',
         'Type' => 'text',
         'Size' => '80',
         'Required' => false,
-        'Description' => 'Optional server file path or HTTPS URL for TLDs that require a supporting document.',
+        'Description' => 'Upload an optional supporting JPG, PNG, or PDF document.',
     ];
 }

@@ -10,7 +10,8 @@
     "long": "Adds .bd WHOIS lookup support, checkout fields for GetYourBD-required registrant data, and a registrar module that creates GetYourBD partner domain orders after WHMCS payment automation triggers registration.",
     "features": [
       "Adds and removes the .bd WHOIS server entry through addon activation lifecycle",
-      "Registers additional .bd domain fields for NID and document references",
+      "Persists NID and mobile details and provides secure customer document uploads",
+      "Provisions BDT and USD registration and renewal pricing from the GetYourBD pricing API",
       "Creates GetYourBD partner domain orders with HTTP Basic Auth and multipart form data"
     ]
   },
