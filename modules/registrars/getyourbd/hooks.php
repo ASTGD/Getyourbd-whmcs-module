@@ -4,6 +4,11 @@ if (!defined('WHMCS')) {
     die('This file cannot be accessed directly');
 }
 
+if (defined('GETYOURBD_HOOKS_REGISTERED')) {
+    return;
+}
+define('GETYOURBD_HOOKS_REGISTERED', true);
+
 require_once __DIR__ . '/lib/bootstrap.php';
 
 use GetYourBd\DomainDataManager;
@@ -17,10 +22,6 @@ add_hook('AfterShoppingCartCheckout', 1, function ($vars) {
 });
 
 add_hook('ClientAreaFooterOutput', 1, function ($vars) {
-    if (($vars['filename'] ?? '') !== 'cart') {
-        return '';
-    }
-
     $webRoot = rtrim((string) ($vars['WEB_ROOT'] ?? ''), '/');
     $uploadUrl = $webRoot . '/modules/addons/getyourbd/upload.php';
     $csrfToken = (string) ($vars['token'] ?? '');
@@ -38,6 +39,32 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
         return element.closest(".form-group,.row,.col-sm-4") || element.parentElement;
     }
 
+    function findFieldInputs(fieldName) {
+        var found = [];
+        var directSelector = 'input[name$="[' + fieldName + ']"],input[name$="[GetYourBD ' + fieldName + ']"]';
+        document.querySelectorAll(directSelector).forEach(function (input) {
+            found.push(input);
+        });
+
+        if (found.length) {
+            return found;
+        }
+
+        document.querySelectorAll('input[type="text"],input:not([type])').forEach(function (input) {
+            var container = input.parentElement;
+            for (var depth = 0; container && depth < 5; depth++, container = container.parentElement) {
+                var text = (container.textContent || "").replace(/\s+/g, " ").trim();
+                var inputCount = container.querySelectorAll('input[type="text"],input:not([type])').length;
+                if (text.indexOf(fieldName) !== -1 && inputCount === 1) {
+                    found.push(input);
+                    break;
+                }
+            }
+        });
+
+        return found;
+    }
+
     function hideExtraNameservers() {
         ["domainns4", "domainns5"].forEach(function (name) {
             var element = document.querySelector('[name="' + name + '"]');
@@ -53,19 +80,21 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     }
 
     function enhanceUpload(fieldName, fieldType, required) {
-        var selector = 'input[name$="[' + fieldName + ']"],input[name$="[GetYourBD ' + fieldName + ']"]';
-        document.querySelectorAll(selector).forEach(function (hidden) {
+        findFieldInputs(fieldName).forEach(function (hidden) {
             if (hidden.dataset.getyourbdUpload) {
                 return;
             }
 
             hidden.dataset.getyourbdUpload = "1";
+            if (hidden.value.indexOf("getyourbd-upload:") !== 0) {
+                hidden.value = "";
+            }
             hidden.type = "hidden";
 
             var file = document.createElement("input");
             file.type = "file";
             file.accept = ".jpg,.jpeg,.png,.pdf";
-            file.className = "form-control";
+            file.className = hidden.className || "form-control";
             if (required) {
                 file.required = !hidden.value;
             }
@@ -126,8 +155,7 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     }
 
     function init() {
-        var relevant = document.querySelector('input[name$="[NID Document]"],input[name$="[GetYourBD NID Document]"]');
-        if (!relevant) {
+        if (!findFieldInputs("NID Document").length) {
             return;
         }
         hideExtraNameservers();
