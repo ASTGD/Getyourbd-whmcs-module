@@ -140,6 +140,32 @@ class DomainDataManager
         return $params;
     }
 
+    public static function setDocumentReference(int $domainId, string $fieldType, string $reference): void
+    {
+        self::ensureTable();
+
+        $map = [
+            'nid' => ['column' => 'nid_document', 'name' => 'NID Document'],
+            'registration' => ['column' => 'registration_document', 'name' => 'Registration Document'],
+        ];
+        if (!isset($map[$fieldType])) {
+            throw new \InvalidArgumentException('Invalid document type.');
+        }
+
+        $domain = Capsule::table('tbldomains')->where('id', $domainId)->first(['id']);
+        if (!$domain) {
+            throw new \InvalidArgumentException('The selected WHMCS domain does not exist.');
+        }
+
+        $field = $map[$fieldType];
+        Capsule::table(self::TABLE)->where('domain_id', $domainId)->update([
+            $field['column'] => $reference,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        self::upsertWhmcsField($domainId, $field['name'], $reference);
+        UploadManager::bindToDomain($reference, $domainId);
+    }
+
     private static function extract(array $fields): array
     {
         $data = [];
@@ -204,20 +230,26 @@ class DomainDataManager
             'Registration Document' => $data['registration_document'],
         ];
         foreach ($fields as $name => $value) {
-            $existing = Capsule::table('tbldomainsadditionalfields')
-                ->where('domainid', $domainId)
-                ->where('name', $name)
-                ->first(['id']);
-            if ($existing) {
-                Capsule::table('tbldomainsadditionalfields')->where('id', $existing->id)->update(['value' => $value]);
-            } else {
-                Capsule::table('tbldomainsadditionalfields')->insert([
-                    'domainid' => $domainId,
-                    'name' => $name,
-                    'value' => $value,
-                ]);
-            }
+            self::upsertWhmcsField($domainId, $name, $value);
         }
+    }
+
+    private static function upsertWhmcsField(int $domainId, string $name, string $value): void
+    {
+        $existing = Capsule::table('tbldomainsadditionalfields')
+            ->where('domainid', $domainId)
+            ->where('name', $name)
+            ->first(['id']);
+        if ($existing) {
+            Capsule::table('tbldomainsadditionalfields')->where('id', $existing->id)->update(['value' => $value]);
+            return;
+        }
+
+        Capsule::table('tbldomainsadditionalfields')->insert([
+            'domainid' => $domainId,
+            'name' => $name,
+            'value' => $value,
+        ]);
     }
 
     private static function normalisePhone(string $phone): string

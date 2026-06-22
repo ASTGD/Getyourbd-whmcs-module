@@ -84,6 +84,8 @@ The module replaces the document text fields with file upload controls on the WH
 
 The checkout hook validates NID Full Name, NID, Bangladesh mobile format, and the required NID document. After checkout, the module stores the values in `mod_getyourbd_domain_data` and mirrors them to WHMCS domain additional fields so they remain available when an admin manually accepts the order.
 
+Administrators can replace the NID document or upload an optional registration document from the WHMCS domain management page. Open the client domain in **Clients > Domain Registrations** and use the **GetYourBD Registration Documents** panel. Admin uploads are saved immediately to the same secure storage and domain additional fields used by the registrar request.
+
 GetYourBD orders expose only the first three nameserver fields. Registration periods from 1-5 years are available from the domain search result when the corresponding WHMCS pricing rows are enabled.
 
 ## Registration Flow
