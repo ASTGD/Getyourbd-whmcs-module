@@ -30,6 +30,7 @@ class ApiClient
             'nameServers[0]' => $payload['nameServers'][0],
             'nameServers[1]' => $payload['nameServers'][1],
             'fullName' => $payload['fullName'],
+            'nidFullName' => $payload['nidFullName'],
             'nid' => $payload['nid'],
             'nid_document' => $nidDocument['curlFile'],
             'email' => $payload['email'],

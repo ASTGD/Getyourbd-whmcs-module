@@ -75,13 +75,14 @@ The addon does not provision pricing for `.ac.bd`, `.gov.bd`, or `.mil.bd`.
 The addon registers these additional domain fields for supported `.bd` TLDs:
 
 - `NID`
+- `NID Full Name`
 - `Mobile Number`
 - `NID Document`
 - `Registration Document`
 
 The module replaces the document text fields with file upload controls on the WHMCS domain configuration page. Customers can upload JPG, JPEG, PNG, or PDF documents up to 15 MB. Files are stored below the configured WHMCS attachments directory and referenced by an opaque token.
 
-The checkout hook validates NID, Bangladesh mobile format, and the required NID document. After checkout, the module stores the values in `mod_getyourbd_domain_data` and mirrors them to WHMCS domain additional fields so they remain available when an admin manually accepts the order.
+The checkout hook validates NID Full Name, NID, Bangladesh mobile format, and the required NID document. After checkout, the module stores the values in `mod_getyourbd_domain_data` and mirrors them to WHMCS domain additional fields so they remain available when an admin manually accepts the order.
 
 GetYourBD orders expose only the first three nameserver fields. Registration periods from 1-5 years are available from the domain search result when the corresponding WHMCS pricing rows are enabled.
 
@@ -92,6 +93,7 @@ WHMCS handles the cart, invoice, and payment. Once WHMCS decides to send a regis
 - `domain`
 - `nameServers[0..2]`
 - `fullName`
+- `nidFullName`
 - `nid`
 - `nid_document`
 - `registration_document`, when supplied

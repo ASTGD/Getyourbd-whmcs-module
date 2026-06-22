@@ -141,6 +141,7 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
 
     function cleanLegacyLabels() {
         var replacements = {
+            "GetYourBD NID Full Name:": "NID Full Name:",
             "GetYourBD NID:": "NID:",
             "GetYourBD Contact Number:": "Mobile Number:",
             "GetYourBD NID Document:": "NID Document:",

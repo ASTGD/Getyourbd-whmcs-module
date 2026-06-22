@@ -8,6 +8,7 @@ class DomainDataManager
 {
     private const TABLE = 'mod_getyourbd_domain_data';
     private const FIELD_NAMES = [
+        'nid_full_name' => ['NID Full Name', 'GetYourBD NID Full Name'],
         'nid' => ['NID', 'GetYourBD NID'],
         'mobile' => ['Mobile Number', 'GetYourBD Contact Number'],
         'nid_document' => ['NID Document', 'GetYourBD NID Document'],
@@ -18,6 +19,11 @@ class DomainDataManager
     {
         $schema = Capsule::schema();
         if ($schema->hasTable(self::TABLE)) {
+            if (!$schema->hasColumn(self::TABLE, 'nid_full_name')) {
+                $schema->table(self::TABLE, function ($table) {
+                    $table->string('nid_full_name', 255)->nullable()->after('domain');
+                });
+            }
             return;
         }
 
@@ -25,6 +31,7 @@ class DomainDataManager
             $table->increments('id');
             $table->integer('domain_id')->unsigned()->unique();
             $table->string('domain', 255)->index();
+            $table->string('nid_full_name', 255);
             $table->string('nid', 32);
             $table->string('mobile', 32);
             $table->string('nid_document', 255);
@@ -52,6 +59,9 @@ class DomainDataManager
                 continue;
             }
 
+            if ($data['nid_full_name'] === '') {
+                $errors[] = 'NID Full Name is required.';
+            }
             if (!preg_match('/^(\d{10}|\d{13}|\d{17})$/', $data['nid'])) {
                 $errors[] = 'NID must be 10, 13, or 17 digits.';
             }
@@ -93,7 +103,7 @@ class DomainDataManager
             if (!self::containsGetYourBdFields($data)) {
                 $data = self::pendingForDomain($pending, (string) $domain->domain, $index);
             }
-            if (!$data || $data['nid'] === '' || $data['mobile'] === '') {
+            if (!$data || $data['nid_full_name'] === '' || $data['nid'] === '' || $data['mobile'] === '') {
                 continue;
             }
 
@@ -120,6 +130,7 @@ class DomainDataManager
         }
 
         $additional = is_array($params['additionalfields'] ?? null) ? $params['additionalfields'] : [];
+        $additional['NID Full Name'] = (string) $row->nid_full_name;
         $additional['NID'] = (string) $row->nid;
         $additional['Mobile Number'] = (string) $row->mobile;
         $additional['NID Document'] = (string) $row->nid_document;
@@ -147,7 +158,7 @@ class DomainDataManager
 
     private static function containsGetYourBdFields(array $data): bool
     {
-        return $data['nid'] !== '' || $data['mobile'] !== '' || $data['nid_document'] !== '';
+        return $data['nid_full_name'] !== '' || $data['nid'] !== '' || $data['mobile'] !== '' || $data['nid_document'] !== '';
     }
 
     private static function pendingForDomain(array $pending, string $domain, int $index): array
@@ -165,6 +176,7 @@ class DomainDataManager
     {
         $values = [
             'domain' => $domain,
+            'nid_full_name' => $data['nid_full_name'],
             'nid' => $data['nid'],
             'mobile' => $data['mobile'],
             'nid_document' => $data['nid_document'],
@@ -185,6 +197,7 @@ class DomainDataManager
     private static function upsertWhmcsFields(int $domainId, array $data): void
     {
         $fields = [
+            'NID Full Name' => $data['nid_full_name'],
             'NID' => $data['nid'],
             'Mobile Number' => $data['mobile'],
             'NID Document' => $data['nid_document'],

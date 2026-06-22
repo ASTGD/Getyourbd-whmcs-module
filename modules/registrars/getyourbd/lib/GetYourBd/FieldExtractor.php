@@ -6,6 +6,7 @@ use InvalidArgumentException;
 
 class FieldExtractor
 {
+    public const FIELD_NID_FULL_NAME = 'NID Full Name';
     public const FIELD_NID = 'NID';
     public const FIELD_CONTACT_NUMBER = 'Mobile Number';
     public const FIELD_NID_DOCUMENT = 'NID Document';
@@ -60,6 +61,14 @@ class FieldExtractor
 
         $domain = self::buildDomainName($params);
         self::assertSupportedDomain($domain);
+
+        $nidFullName = self::fieldValue($additionalFields, [
+            self::FIELD_NID_FULL_NAME,
+            'GetYourBD NID Full Name',
+        ]);
+        if ($nidFullName === '') {
+            throw new InvalidArgumentException('NID Full Name is required.');
+        }
 
         $nid = self::fieldValue($additionalFields, [
             self::FIELD_NID,
@@ -116,6 +125,7 @@ class FieldExtractor
             'domain' => $domain,
             'nameServers' => $nameservers,
             'fullName' => $fullName,
+            'nidFullName' => $nidFullName,
             'nid' => $nid,
             'email' => $email,
             'contactAddress' => $contactAddress,

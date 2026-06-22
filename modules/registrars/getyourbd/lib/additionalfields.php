@@ -24,6 +24,14 @@ $getyourbdExtensions = [
 
 foreach ($getyourbdExtensions as $extension) {
     $additionaldomainfields[$extension][] = [
+        'Name' => 'NID Full Name',
+        'Type' => 'text',
+        'Size' => '60',
+        'Required' => true,
+        'Description' => 'Enter the full name exactly as it appears on the NID.',
+    ];
+
+    $additionaldomainfields[$extension][] = [
         'Name' => 'NID',
         'Type' => 'text',
         'Size' => '30',
