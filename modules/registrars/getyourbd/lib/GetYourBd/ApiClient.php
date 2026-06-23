@@ -71,13 +71,68 @@ class ApiClient
 
         $decoded = is_string($response) ? json_decode($response, true) : null;
 
-        $this->logCall($url, $payload, $status, $decoded, $response, $error);
+        $this->logCall('CreateDomainOrder', $url, $payload, $status, $decoded, $response, $error);
 
         if ($response === false) {
             throw new RuntimeException('GetYourBD API connection failed: ' . $error);
         }
 
         if ($status !== 201) {
+            throw new RuntimeException($this->errorMessage($status, $decoded, $response));
+        }
+
+        if (!is_array($decoded)) {
+            throw new RuntimeException('GetYourBD API returned an invalid JSON response.');
+        }
+
+        return $decoded;
+    }
+
+    public function updateNameservers(string $domain, array $nameservers): array
+    {
+        $this->assertConfigured();
+
+        $payload = [
+            'domain' => $domain,
+            'nameServers' => array_values($nameservers),
+        ];
+        $body = json_encode($payload);
+        if ($body === false) {
+            throw new RuntimeException('Unable to encode GetYourBD nameserver payload.');
+        }
+
+        $url = $this->baseUrl . '/api/v1/domain/update-ns';
+        $curl = curl_init($url);
+        curl_setopt_array($curl, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => $this->timeout,
+            CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+            CURLOPT_USERPWD => $this->userId . ':' . $this->password,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/json',
+            ],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+
+        $response = curl_exec($curl);
+        $status = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        $decoded = is_string($response) ? json_decode($response, true) : null;
+
+        $this->logCall('UpdateNameservers', $url, $payload, $status, $decoded, $response, $error);
+
+        if ($response === false) {
+            throw new RuntimeException('GetYourBD API connection failed: ' . $error);
+        }
+
+        if ($status < 200 || $status >= 300) {
             throw new RuntimeException($this->errorMessage($status, $decoded, $response));
         }
 
@@ -123,7 +178,7 @@ class ApiClient
         return 'GetYourBD API error HTTP ' . $status . ': ' . substr((string) $response, 0, 500);
     }
 
-    private function logCall(string $url, array $payload, int $status, $decoded, $response, string $error): void
+    private function logCall(string $action, string $url, array $payload, int $status, $decoded, $response, string $error): void
     {
         if (!function_exists('logModuleCall')) {
             return;
@@ -132,20 +187,24 @@ class ApiClient
         $request = [
             'url' => $url,
             'domain' => $payload['domain'] ?? '',
-            'years' => $payload['years'] ?? '',
             'nameServers' => $payload['nameServers'] ?? [],
         ];
+        if (isset($payload['years'])) {
+            $request['years'] = $payload['years'];
+        }
 
         if ($this->debug) {
             $request['email'] = $payload['email'] ?? '';
             $request['contactNumber'] = $payload['contactNumber'] ?? '';
-            $request['nid'] = '[redacted]';
-            $request['documents'] = '[redacted]';
+            if (isset($payload['nid'])) {
+                $request['nid'] = '[redacted]';
+                $request['documents'] = '[redacted]';
+            }
         }
 
         logModuleCall(
             'getyourbd',
-            'CreateDomainOrder',
+            $action,
             $request,
             $decoded ?: $response ?: $error,
             ['status' => $status],

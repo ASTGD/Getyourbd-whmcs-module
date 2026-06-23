@@ -137,3 +137,49 @@ function getyourbd_RegisterDomain($params)
         DocumentResolver::cleanup($registrationDocument);
     }
 }
+
+function getyourbd_GetNameservers($params)
+{
+    try {
+        FieldExtractor::assertSupportedDomain(FieldExtractor::buildDomainName($params));
+        $current = OrderRepository::currentNameservers($params);
+
+        return [
+            'ns1' => (string) ($current['ns1'] ?? ''),
+            'ns2' => (string) ($current['ns2'] ?? ''),
+            'ns3' => (string) ($current['ns3'] ?? ''),
+            'ns4' => '',
+            'ns5' => '',
+        ];
+    } catch (Throwable $e) {
+        return [
+            'error' => $e->getMessage(),
+        ];
+    }
+}
+
+function getyourbd_SaveNameservers($params)
+{
+    try {
+        $payload = FieldExtractor::buildNameserverUpdatePayload($params);
+
+        $client = new ApiClient(
+            'https://getyour.com.bd',
+            (string) ($params['PartnerUserId'] ?? ''),
+            (string) ($params['PartnerPassword'] ?? ''),
+            30,
+            ((string) ($params['DebugMode'] ?? '')) === 'on'
+        );
+
+        $response = $client->updateNameservers($payload['domain'], $payload['nameServers']);
+        OrderRepository::recordNameserverUpdate($params, $payload, $response);
+
+        return [
+            'success' => true,
+        ];
+    } catch (Throwable $e) {
+        return [
+            'error' => $e->getMessage(),
+        ];
+    }
+}

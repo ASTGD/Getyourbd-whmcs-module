@@ -10,6 +10,7 @@ This package contains a WHMCS addon module plus a WHMCS registrar module for sel
 - Adds secure customer document uploads and persists registry data through checkout and manual order acceptance.
 - Provisions BDT and USD registration and renewal pricing for sellable `.bd` TLDs from the GetYourBD pricing API.
 - Calls `POST https://getyour.com.bd/api/v1/domain/orders` after WHMCS triggers `RegisterDomain`.
+- Calls `POST https://getyour.com.bd/api/v1/domain/update-ns` after WHMCS triggers `SaveNameservers`.
 - Stores GetYourBD partner order/invoice response metadata in `mod_getyourbd_orders` and appends a short domain admin note.
 
 ## Install
@@ -105,6 +106,24 @@ WHMCS handles the cart, invoice, and payment. Once WHMCS decides to send a regis
 - `years`
 
 If the API returns HTTP `201`, the module returns success to WHMCS. Any validation, authentication, rate-limit, or server error is returned as a registrar error for the admin to review.
+
+## Nameserver Changes
+
+After registration, clients can change nameservers from the WHMCS domain management page. The module implements WHMCS `GetNameservers` and `SaveNameservers` callbacks for GetYourBD domains.
+
+The module requires exactly two or three submitted nameservers. The fourth and fifth nameserver fields are hidden in the client area for GetYourBD domains and are cleared before submission. When the user saves a valid change, `getyourbd_SaveNameservers()` sends this JSON payload to the partner API:
+
+```json
+{
+  "domain": "example.com.bd",
+  "nameServers": [
+    "ns1.example.com",
+    "ns2.example.com"
+  ]
+}
+```
+
+Successful updates are saved back to the WHMCS domain record so the current nameservers remain visible on the domain details page.
 
 ## Deactivate
 

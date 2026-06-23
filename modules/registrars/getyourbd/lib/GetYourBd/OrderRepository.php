@@ -55,6 +55,121 @@ class OrderRepository
         self::appendDomainNote($domainId, $response);
     }
 
+    public static function recordNameserverUpdate(array $params, array $payload, array $response): void
+    {
+        if (!class_exists(Capsule::class)) {
+            return;
+        }
+
+        Installer::ensureOrderTable();
+
+        $domainId = isset($params['domainid']) ? (int) $params['domainid'] : null;
+        $domain = (string) ($payload['domain'] ?? FieldExtractor::buildDomainName($params));
+        $order = is_array($response['order'] ?? null) ? $response['order'] : [];
+        $now = date('Y-m-d H:i:s');
+
+        $data = [
+            'domainid' => $domainId,
+            'domain' => $domain,
+            'updated_at' => $now,
+        ];
+        if (isset($order['status'])) {
+            $data['status'] = (string) $order['status'];
+        }
+        if (isset($order['id'])) {
+            $data['partner_order_id'] = (string) $order['id'];
+        }
+
+        $query = Capsule::table('mod_getyourbd_orders');
+        if ($domainId) {
+            $query = $query->where('domainid', $domainId);
+        } else {
+            $query = $query->where('domain', $domain);
+        }
+
+        $existing = $query->first();
+        if ($existing) {
+            Capsule::table('mod_getyourbd_orders')->where('id', $existing->id)->update($data);
+        } else {
+            $data['created_at'] = $now;
+            Capsule::table('mod_getyourbd_orders')->insert($data);
+        }
+
+        self::updateWhmcsNameservers($domainId, (array) ($payload['nameServers'] ?? []));
+    }
+
+    public static function currentNameservers(array $params): array
+    {
+        $nameservers = [];
+        for ($index = 1; $index <= 5; $index++) {
+            $value = trim((string) ($params['ns' . $index] ?? ''));
+            if ($value !== '') {
+                $nameservers['ns' . $index] = $value;
+            }
+        }
+
+        if ($nameservers || !class_exists(Capsule::class) || empty($params['domainid'])) {
+            return $nameservers;
+        }
+
+        $schema = Capsule::schema();
+        if (!$schema->hasTable('tbldomains')) {
+            return [];
+        }
+
+        $columns = [];
+        for ($index = 1; $index <= 5; $index++) {
+            $column = 'nameserver' . $index;
+            if ($schema->hasColumn('tbldomains', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        if (!$columns) {
+            return [];
+        }
+
+        $domain = Capsule::table('tbldomains')->where('id', (int) $params['domainid'])->first($columns);
+        if (!$domain) {
+            return [];
+        }
+
+        for ($index = 1; $index <= 5; $index++) {
+            $value = trim((string) ($domain->{'nameserver' . $index} ?? ''));
+            if ($value !== '') {
+                $nameservers['ns' . $index] = $value;
+            }
+        }
+
+        return $nameservers;
+    }
+
+    private static function updateWhmcsNameservers(?int $domainId, array $nameservers): void
+    {
+        if (!$domainId || !class_exists(Capsule::class)) {
+            return;
+        }
+
+        $schema = Capsule::schema();
+        if (!$schema->hasTable('tbldomains')) {
+            return;
+        }
+
+        $data = [];
+        for ($index = 1; $index <= 5; $index++) {
+            $column = 'nameserver' . $index;
+            if (!$schema->hasColumn('tbldomains', $column)) {
+                continue;
+            }
+
+            $data[$column] = isset($nameservers[$index - 1]) ? (string) $nameservers[$index - 1] : '';
+        }
+
+        if ($data) {
+            Capsule::table('tbldomains')->where('id', $domainId)->update($data);
+        }
+    }
+
     private static function appendDomainNote(?int $domainId, array $response): void
     {
         if (!$domainId) {

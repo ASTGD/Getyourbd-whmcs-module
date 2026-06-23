@@ -23,11 +23,19 @@ add_hook('AfterShoppingCartCheckout', 1, function ($vars) {
 });
 
 add_hook('ClientAreaFooterOutput', 1, function ($vars) {
+    $constrainNameservers = false;
+    $domainId = (int) ($_GET['id'] ?? 0);
+    if ($domainId > 0) {
+        $domain = Capsule::table('tbldomains')->where('id', $domainId)->first(['registrar']);
+        $constrainNameservers = $domain && strcasecmp((string) $domain->registrar, 'getyourbd') === 0;
+    }
+
     $webRoot = rtrim((string) ($vars['WEB_ROOT'] ?? ''), '/');
     $uploadUrl = $webRoot . '/modules/addons/getyourbd/upload.php';
     $csrfToken = (string) ($vars['token'] ?? '');
     $uploadUrlJson = json_encode($uploadUrl);
     $csrfTokenJson = json_encode($csrfToken);
+    $constrainNameserversJson = json_encode($constrainNameservers);
 
     return <<<HTML
 <script>
@@ -35,6 +43,7 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     "use strict";
     var uploadUrl = {$uploadUrlJson};
     var csrfToken = {$csrfTokenJson};
+    var constrainNameservers = {$constrainNameserversJson};
 
     function closestGroup(element) {
         return element.closest(".form-group,.row,.col-sm-4") || element.parentElement;
@@ -67,16 +76,45 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     }
 
     function hideExtraNameservers() {
-        ["domainns4", "domainns5"].forEach(function (name) {
-            var element = document.querySelector('[name="' + name + '"]');
-            if (!element) {
-                return;
-            }
-            var group = closestGroup(element);
-            if (group) {
-                group.style.display = "none";
-            }
-            element.value = "";
+        [4, 5].forEach(function (index) {
+            [
+                '[name="domainns' + index + '"]',
+                '[name="ns' + index + '"]',
+                '[name="nameserver' + index + '"]',
+                '#domainns' + index,
+                '#ns' + index,
+                '#nameserver' + index
+            ].forEach(function (selector) {
+                var element = document.querySelector(selector);
+                if (!element) {
+                    return;
+                }
+                var group = closestGroup(element);
+                if (group) {
+                    group.style.display = "none";
+                }
+                element.value = "";
+            });
+        });
+    }
+
+    function requireMinimumNameservers() {
+        [1, 2].forEach(function (index) {
+            [
+                '[name="domainns' + index + '"]',
+                '[name="ns' + index + '"]',
+                '[name="nameserver' + index + '"]',
+                '#domainns' + index,
+                '#ns' + index,
+                '#nameserver' + index
+            ].some(function (selector) {
+                var element = document.querySelector(selector);
+                if (!element) {
+                    return false;
+                }
+                element.required = true;
+                return true;
+            });
         });
     }
 
@@ -157,10 +195,16 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     }
 
     function init() {
-        if (!findFieldInputs("NID Document").length) {
+        var hasGetYourBdConfigFields = !!findFieldInputs("NID Document").length;
+
+        if (constrainNameservers || hasGetYourBdConfigFields) {
+            hideExtraNameservers();
+            requireMinimumNameservers();
+        }
+
+        if (!hasGetYourBdConfigFields) {
             return;
         }
-        hideExtraNameservers();
         cleanLegacyLabels();
         enhanceUpload("NID Document", "nid", true);
         enhanceUpload("Registration Document", "registration", false);

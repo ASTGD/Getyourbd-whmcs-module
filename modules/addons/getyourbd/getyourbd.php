@@ -21,7 +21,7 @@ function getyourbd_config()
         'description' => 'Adds .bd WHOIS lookup support and checkout fields for the GetYourBD registrar module.',
         'author' => 'ASTGD',
         'language' => 'english',
-        'version' => '1.1.3',
+        'version' => '1.1.4',
         'fields' => [],
     ];
 }

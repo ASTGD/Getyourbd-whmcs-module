@@ -148,15 +148,26 @@ class FieldExtractor
         ];
     }
 
+    public static function buildNameserverUpdatePayload(array $params): array
+    {
+        $domain = self::buildDomainName($params);
+        self::assertSupportedDomain($domain);
+
+        $nameservers = self::submittedNameservers($params);
+        $count = count($nameservers);
+        if ($count < 2 || $count > 3) {
+            throw new InvalidArgumentException('GetYourBD requires exactly two or three nameservers.');
+        }
+
+        return [
+            'domain' => $domain,
+            'nameServers' => $nameservers,
+        ];
+    }
+
     private static function nameservers(array $params): array
     {
-        $nameservers = [];
-        for ($index = 1; $index <= 5; $index++) {
-            $value = trim((string) ($params['ns' . $index] ?? ''));
-            if ($value !== '') {
-                $nameservers[] = $value;
-            }
-        }
+        $nameservers = self::submittedNameservers($params);
 
         if (count($nameservers) < 2) {
             foreach (['DefaultNameserver1', 'DefaultNameserver2', 'DefaultNameserver3'] as $key) {
@@ -168,6 +179,19 @@ class FieldExtractor
         }
 
         return array_slice($nameservers, 0, 3);
+    }
+
+    private static function submittedNameservers(array $params): array
+    {
+        $nameservers = [];
+        for ($index = 1; $index <= 5; $index++) {
+            $value = trim((string) ($params['ns' . $index] ?? ''));
+            if ($value !== '') {
+                $nameservers[] = $value;
+            }
+        }
+
+        return array_values(array_unique($nameservers));
     }
 
     private static function contactAddress(array $params): string
