@@ -123,7 +123,7 @@ The module requires exactly two or three submitted nameservers. The fourth and f
 }
 ```
 
-Successful updates are saved back to the WHMCS domain record so the current nameservers remain visible on the domain details page.
+For domains with WHMCS status `Pending`, the nameservers are saved only to the WHMCS domain record and the partner API is not called. This lets administrators prepare or correct nameservers before accepting the order. For all other statuses, a successful API update is saved back to WHMCS so the current nameservers remain visible on the domain details page.
 
 ## Deactivate
 

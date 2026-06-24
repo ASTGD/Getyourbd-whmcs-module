@@ -95,7 +95,33 @@ class OrderRepository
             Capsule::table('mod_getyourbd_orders')->insert($data);
         }
 
-        self::updateWhmcsNameservers($domainId, (array) ($payload['nameServers'] ?? []));
+        self::saveNameserversLocally($params, (array) ($payload['nameServers'] ?? []));
+    }
+
+    public static function isPendingDomain(array $params): bool
+    {
+        $status = trim((string) ($params['status'] ?? ''));
+
+        if (class_exists(Capsule::class) && !empty($params['domainid'])) {
+            $schema = Capsule::schema();
+            if ($schema->hasTable('tbldomains') && $schema->hasColumn('tbldomains', 'status')) {
+                $storedStatus = Capsule::table('tbldomains')
+                    ->where('id', (int) $params['domainid'])
+                    ->value('status');
+
+                if ($storedStatus !== null) {
+                    $status = trim((string) $storedStatus);
+                }
+            }
+        }
+
+        return strcasecmp($status, 'Pending') === 0;
+    }
+
+    public static function saveNameserversLocally(array $params, array $nameservers): void
+    {
+        $domainId = isset($params['domainid']) ? (int) $params['domainid'] : null;
+        self::updateWhmcsNameservers($domainId, $nameservers);
     }
 
     public static function currentNameservers(array $params): array

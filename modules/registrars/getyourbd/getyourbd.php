@@ -163,6 +163,14 @@ function getyourbd_SaveNameservers($params)
     try {
         $payload = FieldExtractor::buildNameserverUpdatePayload($params);
 
+        if (OrderRepository::isPendingDomain($params)) {
+            OrderRepository::saveNameserversLocally($params, $payload['nameServers']);
+
+            return [
+                'success' => true,
+            ];
+        }
+
         $client = new ApiClient(
             'https://getyour.com.bd',
             (string) ($params['PartnerUserId'] ?? ''),
