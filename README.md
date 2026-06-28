@@ -109,7 +109,9 @@ If the API returns HTTP `201`, the module returns success to WHMCS. Any validati
 
 ## Nameserver Changes
 
-After registration, clients can change nameservers from the WHMCS domain management page. The module implements WHMCS `GetNameservers` and `SaveNameservers` callbacks for GetYourBD domains.
+After registration, clients can change nameservers from the WHMCS domain management page. The module implements WHMCS `GetDomainInformation`, `GetNameservers`, and `SaveNameservers` callbacks for GetYourBD domains.
+
+Successful registrations save the submitted nameservers back to the WHMCS domain record so the client-area nameserver form can display the current values. If a WHMCS theme renders the nameserver page without visible input fields, the client-area hook injects the standard `ns1`, `ns2`, and `ns3` fields for GetYourBD domains.
 
 The module requires exactly two or three submitted nameservers. The fourth and fifth nameserver fields are hidden in the client area for GetYourBD domains and are cleared before submission. When the user saves a valid change, `getyourbd_SaveNameservers()` sends this JSON payload to the partner API:
 

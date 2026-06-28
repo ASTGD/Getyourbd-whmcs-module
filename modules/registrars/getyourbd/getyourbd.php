@@ -158,6 +158,45 @@ function getyourbd_GetNameservers($params)
     }
 }
 
+function getyourbd_GetDomainInformation($params)
+{
+    try {
+        $domain = FieldExtractor::buildDomainName($params);
+        FieldExtractor::assertSupportedDomain($domain);
+
+        $class = '\\WHMCS\\Domain\\Registrar\\Domain';
+        if (!class_exists($class)) {
+            return getyourbd_GetNameservers($params);
+        }
+
+        $current = OrderRepository::currentNameservers($params);
+        $nameservers = [];
+        for ($index = 1; $index <= 5; $index++) {
+            $value = trim((string) ($current['ns' . $index] ?? ''));
+            if ($value !== '') {
+                $nameservers[] = $value;
+            }
+        }
+
+        $domainInformation = new $class();
+        if (method_exists($domainInformation, 'setDomain')) {
+            $domainInformation->setDomain($domain);
+        }
+        if (method_exists($domainInformation, 'setNameservers')) {
+            $domainInformation->setNameservers($nameservers);
+        }
+        if (method_exists($domainInformation, 'setRegistrationStatus')) {
+            $domainInformation->setRegistrationStatus((string) ($params['status'] ?? ''));
+        }
+
+        return $domainInformation;
+    } catch (Throwable $e) {
+        return [
+            'error' => $e->getMessage(),
+        ];
+    }
+}
+
 function getyourbd_SaveNameservers($params)
 {
     try {

@@ -12,6 +12,7 @@ define('GETYOURBD_HOOKS_REGISTERED', true);
 require_once __DIR__ . '/lib/bootstrap.php';
 
 use GetYourBd\DomainDataManager;
+use GetYourBd\OrderRepository;
 use WHMCS\Database\Capsule;
 
 add_hook('ShoppingCartValidateDomainsConfig', 1, function ($vars) {
@@ -24,10 +25,17 @@ add_hook('AfterShoppingCartCheckout', 1, function ($vars) {
 
 add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     $constrainNameservers = false;
+    $currentNameservers = [];
     $domainId = (int) ($_GET['id'] ?? 0);
     if ($domainId > 0) {
-        $domain = Capsule::table('tbldomains')->where('id', $domainId)->first(['registrar']);
+        $domain = Capsule::table('tbldomains')->where('id', $domainId)->first(['domain', 'registrar']);
         $constrainNameservers = $domain && strcasecmp((string) $domain->registrar, 'getyourbd') === 0;
+        if ($constrainNameservers) {
+            $currentNameservers = OrderRepository::currentNameservers([
+                'domainid' => $domainId,
+                'domain' => (string) ($domain->domain ?? ''),
+            ]);
+        }
     }
 
     $webRoot = rtrim((string) ($vars['WEB_ROOT'] ?? ''), '/');
@@ -36,6 +44,7 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     $uploadUrlJson = json_encode($uploadUrl);
     $csrfTokenJson = json_encode($csrfToken);
     $constrainNameserversJson = json_encode($constrainNameservers);
+    $currentNameserversJson = json_encode($currentNameservers);
 
     return <<<HTML
 <script>
@@ -44,9 +53,33 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
     var uploadUrl = {$uploadUrlJson};
     var csrfToken = {$csrfTokenJson};
     var constrainNameservers = {$constrainNameserversJson};
+    var currentNameservers = {$currentNameserversJson};
 
     function closestGroup(element) {
         return element.closest(".form-group,.row,.col-sm-4") || element.parentElement;
+    }
+
+    function isNameserverInput(element) {
+        if (!element || !element.name) {
+            return false;
+        }
+
+        return /^(domainns|ns|nameserver)[1-5]$/i.test(element.name);
+    }
+
+    function nameserverInputs(root) {
+        var scope = root || document;
+        return Array.prototype.slice.call(scope.querySelectorAll(
+            '[name="domainns1"],[name="domainns2"],[name="domainns3"],[name="domainns4"],[name="domainns5"],' +
+            '[name="ns1"],[name="ns2"],[name="ns3"],[name="ns4"],[name="ns5"],' +
+            '[name="nameserver1"],[name="nameserver2"],[name="nameserver3"],[name="nameserver4"],[name="nameserver5"]'
+        )).filter(isNameserverInput);
+    }
+
+    function visibleNameserverInputs() {
+        return nameserverInputs(document).filter(function (element) {
+            return element.offsetParent !== null && element.type !== "hidden";
+        });
     }
 
     function findFieldInputs(fieldName) {
@@ -90,8 +123,11 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
                     return;
                 }
                 var group = closestGroup(element);
-                if (group) {
+                if (group && nameserverInputs(group).length <= 1) {
                     group.style.display = "none";
+                } else {
+                    element.style.display = "none";
+                    element.type = "hidden";
                 }
                 element.value = "";
             });
@@ -116,6 +152,65 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
                 return true;
             });
         });
+    }
+
+    function findNameserverForm() {
+        var forms = Array.prototype.slice.call(document.querySelectorAll("form"));
+        return forms.find(function (form) {
+            var text = (form.textContent || "").replace(/\s+/g, " ").trim();
+            var submit = form.querySelector('button[type="submit"],input[type="submit"],button:not([type])');
+
+            return /Nameservers?/i.test(text) || (submit && /Change Nameservers?/i.test(submit.value || submit.textContent || ""));
+        }) || null;
+    }
+
+    function createNameserverField(index, value) {
+        var group = document.createElement("div");
+        group.className = "form-group";
+
+        var label = document.createElement("label");
+        label.setAttribute("for", "ns" + index);
+        label.textContent = "Nameserver " + index;
+        group.appendChild(label);
+
+        var input = document.createElement("input");
+        input.type = "text";
+        input.name = "ns" + index;
+        input.id = "ns" + index;
+        input.className = "form-control";
+        input.value = value || "";
+        if (index < 3) {
+            input.required = true;
+        }
+        group.appendChild(input);
+
+        return group;
+    }
+
+    function ensureNameserverFormFields() {
+        if (!constrainNameservers || visibleNameserverInputs().length) {
+            return;
+        }
+
+        var form = findNameserverForm();
+        if (!form || form.dataset.getyourbdNameserversInjected) {
+            return;
+        }
+
+        form.dataset.getyourbdNameserversInjected = "1";
+        var submit = form.querySelector('button[type="submit"],input[type="submit"],button:not([type])');
+        var anchor = submit ? closestGroup(submit) || submit : null;
+        var fragment = document.createDocumentFragment();
+
+        [1, 2, 3].forEach(function (index) {
+            fragment.appendChild(createNameserverField(index, currentNameservers["ns" + index] || ""));
+        });
+
+        if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(fragment, anchor);
+        } else {
+            form.appendChild(fragment);
+        }
     }
 
     function enhanceUpload(fieldName, fieldType, required) {
@@ -200,6 +295,7 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
         if (constrainNameservers || hasGetYourBdConfigFields) {
             hideExtraNameservers();
             requireMinimumNameservers();
+            ensureNameserverFormFields();
         }
 
         if (!hasGetYourBdConfigFields) {

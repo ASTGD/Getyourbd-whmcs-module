@@ -53,6 +53,7 @@ class OrderRepository
         }
 
         self::appendDomainNote($domainId, $response);
+        self::saveNameserversLocally($params, (array) ($payload['nameServers'] ?? []));
     }
 
     public static function recordNameserverUpdate(array $params, array $payload, array $response): void
